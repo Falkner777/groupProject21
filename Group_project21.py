@@ -62,6 +62,11 @@ class Application:
                 messagebox.showinfo(title="Database Info", message=f'Database {fname[fname.rfind("/") + 1:]} '
                                                                    f'successfully connected')
 
+                try:
+                    self.updateAllRatings()
+                except:
+                    pass
+
             except sql.Error:
                 # Throw error στην περίπτωση που δεν κατάφερε να ανοίξη η βάση
                 self.isOPEN = 0
@@ -345,6 +350,8 @@ class Application:
         try:
             cursor.execute(query)
             messagebox.showinfo("Succes", table_name + ' has been updated successfully!')
+            if table_name == "Review":
+                self.updateAllRatings()
         except sql.Error as error:
             messagebox.showerror("Error", error)
 
@@ -565,7 +572,9 @@ class Application:
         try:
             #εκτέλεση του query ενημέρωση της βάσης και διαγραφή των widgets στο παράθυο
             cur.execute(query)
-            messagebox.showinfo('Success', 'Insertion  Complete')
+            messagebox.showinfo('Success', 'Insertion Complete')
+            if table_name == "Review":
+                self.updateAllRatings()
 
             self.con.commit()
             self.clearWidgets(self.topWidgets)
@@ -597,6 +606,8 @@ class Application:
             try:
                 cursor.execute(query)
                 messagebox.showinfo("Success", "Query has been executed successfully")
+                if "review" in query.lower():
+                    self.updateAllRatings()
             except sql.Error as error:
                 messagebox.showerror("Querry Error", error)
 
@@ -715,6 +726,8 @@ class Application:
             query = f'delete from {tableName} where {keys[0]}={data[0]} '
         try:
             self.cur.execute(query)
+            if tableName == "Review":
+                self.updateAllRatings()
             messagebox.showinfo("Success", "Successful deletion")
         except sql.Error as error:
             messagebox.showerror("Error",error)
@@ -724,6 +737,49 @@ class Application:
         for widg_list in args:
             for widget in widg_list:
                 widget.destroy()
+
+
+    def updateScore(self, id, table_name):
+        #type "Location" ή "Business"
+        cur = self.cur
+        if table_name.lower() == "location":
+            idtype = "loc_id"
+        elif table_name.lower() == "business":
+            idtype = "buss_id"
+        revQuery = "SELECT AVG(Score) FROM Review WHERE " + idtype + "=" + str(id)
+        results = cur.execute(revQuery).fetchall()
+        rating = results[0][0]
+        rating = round(rating, 1)
+        
+        if str(rating) == "None":
+            rating = "0"
+        
+        updateQuery = "UPDATE " + table_name + " SET metascore = " + str(rating) +  " WHERE " + idtype + " = " + str(id) + ";"
+
+        cur.execute(updateQuery)
+
+
+    def updateAllRatings(self):
+        cur = self.cur
+        queryLocs = "SELECT DISTINCT Loc_id FROM REVIEW"
+        loc_ids = cur.execute(queryLocs).fetchall()
+        try:
+            loc_ids.remove((None, ))
+        except:
+            pass
+        for loc_id in loc_ids:
+            loc_id = loc_id[0]
+            self.updateScore(loc_id, "Location")
+
+        queryBuss = "SELECT DISTINCT buss_id FROM REVIEW"
+        buss_ids = cur.execute(queryBuss).fetchall()
+        try:
+            buss_ids.remove((None, ))
+        except:
+            pass
+        for buss_id in buss_ids:
+            buss_id = buss_id[0]
+            self.updateScore(buss_id, "Business")
 
 
     def exit(self):
