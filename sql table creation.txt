@@ -1,0 +1,236 @@
+CREATE TABLE User(
+user_id INTEGER NOT NULL,
+username VARCHAR(20) NOT NULL UNIQUE,
+fname VARCHAR(50),
+lname VARCHAR(50),
+bdate DATE,
+email STRING NOT NULL UNIQUE CHECK (
+    email LIKE '%_@_%._%' AND
+    LENGTH(email) - LENGTH(REPLACE(email, '@', '')) = 1),
+	
+reg_date DATE NOT NULL,
+contact_num INTEGER(12) CHECK(contact_num >= 10),
+nationality VARCHAR(50),
+sex VARCHAR(15) CHECK(sex IN ('M', 'F', 'NB')),
+
+PRIMARY KEY(user_id)
+);
+
+
+CREATE TABLE Partner(
+part_id INTEGER NOT NULL,
+fname VARCHAR(255),
+lname VARCHAR(255),
+email STRING NOT NULL UNIQUE CHECK (
+    email LIKE '%_@_%._%' AND
+    LENGTH(email) - LENGTH(REPLACE(email, '@', '')) = 1),
+sex VARCHAR(15) CHECK(sex IN ('M', 'F', 'NB')),
+description TEXT,
+occupation VARCHAR(255),
+discount_eligibility BOOLEAN DEFAULT FALSE,
+PRIMARY KEY(part_id)
+
+);
+
+CREATE TABLE Partner_Info(
+part_id INTEGER NOT NULL,
+phone TEXT,
+Links TEXT,
+
+FOREIGN KEY(part_id) REFERENCES Partner(part_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Contract(
+contr_id INTEGER NOT NULL,
+partner_id INTEGER NOT NULL,
+cost DECIMAL(10,2) NOT NULL CHECK(cost >= 0),
+discount INTEGER NOT NULL DEFAULT 0 CHECK(discount <= 100 AND discount >= 0),
+provisions TEXT NOT NULL,  --den 3erw an prepei na exoume null--
+starting_date DATE NOT NULL,
+duration INTEGER NOT NULL DEFAULT 1 CHECK(duration >= 1), --months--
+end_date INTEGER GENERATED ALWAYS AS(date(starting_date, '+' || duration || ' months')) VIRTUAL, --GENERATED ALWAYS AS prepei na to ypologisoume--
+
+PRIMARY KEY(contr_id)
+FOREIGN KEY(partner_id) REFERENCES Partner(part_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+
+
+);
+
+CREATE TABLE Business(
+buss_id INTEGER NOT NULL,
+loc_id INTEGER DEFAULT NULL,
+owner_id INTEGER DEFAULT NULL,
+name VARCHAR(255) NOT NULL UNIQUE,
+address TEXT,
+long decimal,
+lat decimal,
+amenities VARCHAR(255),
+price_range INTEGER CHECK(price_range IN (1,2,3)),
+metascore FLOAT(2,1) NOT NULL DEFAULT 00.0, --ypologisimo apo reviews--
+features TEXT,
+description TEXT,
+
+PRIMARY KEY(buss_id),
+
+FOREIGN KEY(loc_id) REFERENCES Location(loc_id)
+ON DELETE SET DEFAULT ON UPDATE CASCADE,
+
+FOREIGN KEY(owner_id) REFERENCES Partner(part_id)
+ON DELETE SET DEFAULT ON UPDATE CASCADE 
+);
+
+CREATE TABLE Food(
+buss_id INTEGER NOT NULL,
+cuisine_style TEXT,
+meals TEXT,
+
+PRIMARY KEY(buss_id),
+
+FOREIGN KEY(buss_id) REFERENCES Business(buss_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Accomodation(
+buss_id INTEGER NOT NULL,
+star_rating INTEGER CHECK(star_rating IN (1,2,3,4,5)),
+type VARCHAR(255),
+
+PRIMARY KEY(buss_id),
+
+FOREIGN KEY(buss_id) REFERENCES Business(buss_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Commerce(
+buss_id INTEGER NOT NULL,
+
+PRIMARY KEY(buss_id),
+
+FOREIGN KEY(buss_id) REFERENCES Business(buss_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE Belongs_to(
+cat_id INTEGER NOT NULL,
+loc_id INTEGER NOT NULL,
+
+PRIMARY KEY(cat_id, loc_id),
+
+FOREIGN KEY(cat_id) REFERENCES Loc_Categories(cat_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+
+FOREIGN KEY(loc_id) REFERENCES Location(loc_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+
+);
+
+CREATE TABLE Loc_Categories(
+cat_id INTEGER NOT NULL,
+name varchar(255) NOT NULL,
+
+PRIMARY KEY(cat_id)
+);
+
+CREATE TABLE Has_Pref(
+user_id INTEGER NOT NULL,
+pref_id INTEGER NOT NULL,
+PRIMARY KEY(user_id,pref_id),
+FOREIGN KEY(user_id) REFERENCES User(user_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+FOREIGN KEY(pref_id) REFERENCES Preferences(pref_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Review(
+review_id INTEGER NOT NULL,
+user_id INTEGER NOT NULL,
+loc_id INTEGER,
+buss_id INTEGER,
+score INTEGER NOT NULL CHECK(score IN (1,2,3,4,5)),
+rev_date date,
+
+CHECK (
+(loc_id IS NOT NULL AND buss_id IS  NULL) OR (loc_id IS NULL AND buss_id IS NOT NULL)),  --den prepei 2 null alla oute kai ta 2 tautoxrona XOR <> --
+
+PRIMARY KEY(Review_id),
+
+FOREIGN KEY(user_id) REFERENCES User(user_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+
+FOREIGN KEY(loc_id) REFERENCES Location(loc_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+
+FOREIGN KEY(buss_id) REFERENCES Business(buss_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Location(
+loc_id INTEGER NOT NULL,
+name varchar(255) NOT NULL,
+description TEXT,
+long decimal,
+lat decimal,
+metascore FLOAT(2,1) NOT NULL DEFAULT 00.0,
+PRIMARY KEY(loc_id)
+);
+
+--NA TA KANW--
+CREATE TABLE Location_images(
+loc_id INTEGER NOT NULL,
+loc_images BLOB
+);
+
+
+CREATE TABLE Access(
+loc_id INTEGER NOT NULL,
+trans_id INTEGER NOT NULL,
+
+PRIMARY KEY(loc_id, trans_id),
+
+FOREIGN KEY(loc_id) REFERENCES Location(loc_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+
+FOREIGN KEY(trans_id) REFERENCES Transportation(trans_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Transportation(
+trans_id INTEGER NOT NULL,
+name varchar(255) NOT NULL,
+type varchar(255),
+
+PRIMARY KEY(trans_id)
+);
+
+CREATE TABLE Public(
+trans_id INTEGER NOT NULL,
+
+PRIMARY KEY(trans_id),
+
+FOREIGN KEY(trans_id) REFERENCES Transportation(trans_id)
+ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Private(
+owner_id INTEGER DEFAULT NULL,
+trans_id INTEGER NOT NULl,
+price_range INTEGER,
+
+PRIMARY KEY(trans_id),
+
+FOREIGN KEY(trans_id) REFERENCES Transportation(trans_id)
+ON DELETE CASCADE ON UPDATE CASCADE,
+
+FOREIGN KEY(owner_id) REFERENCES Partner(part_id)
+ON DELETE SET DEFAULT ON UPDATE CASCADE
+);
+
+CREATE TABLE Preferences(
+pref_id INTEGER NOT NULL,
+name VARCHAR(255) NOT NULL,
+PRIMARY KEY(pref_id)
+); 
